@@ -4,6 +4,9 @@ on:
   push:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -31,3 +34,12 @@ jobs:
         with:
           name: GemmaViolet-apk
           path: out/GemmaViolet.apk
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: Gemma Violet 1.0.${{ github.run_number }}
+          body: "Установите GemmaViolet.apk на Android-телефон. При первом запуске приложение скачает модель Gemma 4 E2B (~2.6 ГБ)."
+          files: out/GemmaViolet.apk
+          make_latest: true
