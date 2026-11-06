@@ -26,7 +26,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.DeleteForever
 import androidx.compose.material.icons.rounded.DeleteSweep
-import androidx.compose.material.icons.rounded.Memory
 import androidx.compose.material.icons.rounded.Psychology
 import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material.icons.rounded.Visibility
@@ -85,7 +84,7 @@ fun SettingsSheet(vm: ChatViewModel, onDismiss: () -> Unit) {
     ModalBottomSheet(
         onDismissRequest = { apply() },
         sheetState = sheetState,
-        containerColor = VColors.Surface,
+        containerColor = VColors.Bg,
         scrimColor = Color.Black.copy(alpha = 0.55f),
         dragHandle = { BottomSheetDefaults.DragHandle(color = VColors.Outline) },
     ) {
@@ -97,26 +96,24 @@ fun SettingsSheet(vm: ChatViewModel, onDismiss: () -> Unit) {
                 .navigationBarsPadding()
                 .padding(bottom = 24.dp)
         ) {
-            Text("Настройки", color = VColors.Text, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            Text("Настройки", color = VColors.Text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(16.dp))
 
             // Карточка модели
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(18.dp))
+                    .clip(RoundedCornerShape(16.dp))
                     .background(VColors.Surface2)
-                    .border(1.dp, VColors.Outline, RoundedCornerShape(18.dp))
                     .padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                GlowOrb(44.dp)
+                Logo(40.dp)
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("Gemma 4 E2B-it", color = VColors.Text, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
-                    Text("LiteRT-LM · ${vm.backendInfo.ifBlank { "—" }} · 128K контекст", color = VColors.Muted, fontSize = 12.5.sp)
+                    Text(APP_NAME, color = VColors.Text, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                    Text("Gemma 4 E2B · ${vm.backendInfo.ifBlank { "—" }}", color = VColors.Muted, fontSize = 12.5.sp)
                 }
-                Icon(Icons.Rounded.Memory, null, tint = VColors.Accent)
             }
 
             Section("Ускорение")
@@ -168,7 +165,7 @@ fun SettingsSheet(vm: ChatViewModel, onDismiss: () -> Unit) {
             Hint("Нужен, только если Hugging Face не отдаёт файл без авторизации.")
 
             Spacer(Modifier.height(22.dp))
-            GradientButton("Готово", Icons.Rounded.Check) {
+            PrimaryButton("Готово", Icons.Rounded.Check) {
                 scope.launch { sheetState.hide() }.invokeOnCompletion { apply() }
             }
             Spacer(Modifier.height(10.dp))
@@ -176,14 +173,14 @@ fun SettingsSheet(vm: ChatViewModel, onDismiss: () -> Unit) {
                 Text("Сбросить настройки", color = VColors.Muted)
             }
 
-            Section("Опасная зона")
+            Section("Данные")
             DangerRow(Icons.Rounded.DeleteSweep, "Очистить все чаты") { confirmChats = true }
             Spacer(Modifier.height(8.dp))
             DangerRow(Icons.Rounded.DeleteForever, "Удалить модель с устройства (~2.6 ГБ)") { confirmModel = true }
 
             Spacer(Modifier.height(20.dp))
             Text(
-                "Gemma Violet 1.0 · работает полностью на устройстве",
+                "$APP_NAME ${com.violet.gemma.BuildConfig.VERSION_NAME}",
                 color = VColors.Faint, fontSize = 12.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -213,7 +210,7 @@ private fun fieldColors() = OutlinedTextFieldDefaults.colors(
 @Composable
 private fun Section(title: String) {
     Spacer(Modifier.height(24.dp))
-    Text(title.uppercase(), color = VColors.Faint, fontSize = 11.5.sp, letterSpacing = 1.4.sp, fontWeight = FontWeight.SemiBold)
+    Text(title, color = VColors.Muted, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
     Spacer(Modifier.height(10.dp))
 }
 
@@ -285,8 +282,8 @@ private fun SwitchRow(icon: ImageVector, title: String, subtitle: String?, check
             onCheckedChange = onChange,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = Color.White,
-                checkedTrackColor = VColors.PrimaryDeep,
-                checkedBorderColor = VColors.PrimaryDeep,
+                checkedTrackColor = VColors.Primary,
+                checkedBorderColor = VColors.Primary,
                 uncheckedThumbColor = VColors.Muted,
                 uncheckedTrackColor = VColors.Surface3,
                 uncheckedBorderColor = VColors.Outline,
@@ -334,8 +331,7 @@ private fun DangerRow(icon: ImageVector, text: String, onClick: () -> Unit) {
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .background(VColors.Danger.copy(alpha = 0.08f))
-            .border(1.dp, VColors.Danger.copy(alpha = 0.25f), RoundedCornerShape(14.dp))
+            .border(1.dp, VColors.Outline, RoundedCornerShape(14.dp))
             .clickable(onClick = onClick)
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,

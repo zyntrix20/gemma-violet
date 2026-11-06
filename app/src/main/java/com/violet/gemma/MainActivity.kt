@@ -10,19 +10,19 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.violet.gemma.ui.AuroraBackground
 import com.violet.gemma.ui.ChatScreen
 import com.violet.gemma.ui.ChatViewModel
 import com.violet.gemma.ui.LoadingScreen
 import com.violet.gemma.ui.Phase
 import com.violet.gemma.ui.SetupScreen
+import com.violet.gemma.ui.theme.VColors
 import com.violet.gemma.ui.theme.VioletTheme
 
 class MainActivity : ComponentActivity() {
@@ -43,12 +43,11 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun AppRoot(vm: ChatViewModel) {
-    Box(Modifier.fillMaxSize()) {
-        AuroraBackground()
+    Box(Modifier.fillMaxSize().background(VColors.Bg)) {
         AnimatedContent(
             targetState = vm.phase,
             transitionSpec = {
-                (fadeIn(tween(600)) + scaleIn(tween(600), initialScale = 0.96f)) togetherWith fadeOut(tween(300))
+                fadeIn(tween(300)) togetherWith fadeOut(tween(200))
             },
             label = "phase",
         ) { p ->

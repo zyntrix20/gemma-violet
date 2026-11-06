@@ -105,6 +105,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 loadStatus = "Загружаю модель в память…"
                 val info = llm.load(settings, downloader.modelFile.path) { loadStatus = it }
+                if (!llm.visionEnabled && settings.vision) pendingImage = null
                 backendInfo = info
                 visionAvailable = llm.visionEnabled
                 convChatId = null
@@ -244,9 +245,10 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---------- Генерация ----------
 
-    fun send(raw: String) {
+    /** @return true, если сообщение принято (поле ввода можно очистить). */
+    fun send(raw: String): Boolean {
         val text = raw.trim()
-        if ((text.isEmpty() && pendingImage == null) || generating || phase != Phase.READY) return
+        if ((text.isEmpty() && pendingImage == null) || generating || phase != Phase.READY) return false
         val now = System.currentTimeMillis()
         val session = current ?: ChatSession(
             id = newId(),
@@ -264,6 +266,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
             it.copy(messages = it.messages + userMsg, updated = now)
         }
         generate(session.id, history, userMsg)
+        return true
     }
 
     fun regenerate() {

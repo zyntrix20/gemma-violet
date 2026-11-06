@@ -71,9 +71,11 @@ class LlmEngine(private val context: Context) {
             cancel()
             runCatching { conversation?.close() }
             conversation = null
-            val initial = history
-                .filter { it.text.isNotBlank() }
-                .map { if (it.role == Role.USER) Message.user(it.text) else Message.model(it.text) }
+            // Сообщения только с фото сохраняем как текстовую пометку, чтобы не ломать очерёдность реплик
+            val initial = history.map {
+                val t = it.text.ifBlank { if (it.imagePath != null) "[изображение]" else "…" }
+                if (it.role == Role.USER) Message.user(t) else Message.model(t)
+            }
             conversation = e.createConversation(
                 ConversationConfig(
                     systemInstruction = Contents.of(s.systemPrompt.ifBlank { DEFAULT_SYSTEM_PROMPT }),

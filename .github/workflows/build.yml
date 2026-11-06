@@ -28,18 +28,18 @@ jobs:
       - name: Rename APK
         run: |
           mkdir -p out
-          cp app/build/outputs/apk/release/*.apk out/GemmaViolet.apk
+          cp app/build/outputs/apk/release/*.apk out/SerOAI.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: GemmaViolet-apk
-          path: out/GemmaViolet.apk
+          name: SerOAI.apk
+          path: out/SerOAI.apk
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.${{ github.run_number }}
-          name: Gemma Violet 1.0.${{ github.run_number }}
-          body: "Установите GemmaViolet.apk на Android-телефон. При первом запуске приложение скачает модель Gemma 4 E2B (~2.6 ГБ)."
-          files: out/GemmaViolet.apk
+          tag_name: v1.1.${{ github.run_number }}
+          name: SerOAI 1.1.${{ github.run_number }}
+          body: "Установите SerOAI.apk на Android-телефон. При первом запуске приложение скачает модель (~2.6 ГБ)."
+          files: out/SerOAI.apk
           make_latest: true

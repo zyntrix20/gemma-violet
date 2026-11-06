@@ -11,12 +11,23 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.violet.gemma"
+        applicationId = "com.seroai.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInt()
+        versionName = "1.1.${System.getenv("GITHUB_RUN_NUMBER") ?: "0"}"
         ndk { abiFilters += listOf("arm64-v8a") }
+    }
+
+    // Постоянный ключ подписи: без него каждая сборка подписывалась новым ключом
+    // и обновление поверх старой версии не устанавливалось.
+    signingConfigs {
+        create("release") {
+            storeFile = file("seroai.jks")
+            storePassword = "seroai-store"
+            keyAlias = "seroai"
+            keyPassword = "seroai-store"
+        }
     }
 
     buildTypes {
@@ -27,8 +38,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // Подписываем отладочным ключом, чтобы APK сразу ставился на телефон
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 
@@ -37,7 +47,10 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
 
     packaging {
         jniLibs { useLegacyPackaging = true }

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="bg">#0A0712</color>
-    <color name="icon_start">#8B5CF6</color>
-    <color name="icon_end">#4C1D95</color>
+    <color name="bg">#12091F</color>
+    <color name="icon_start">#7C3AED</color>
+    <color name="icon_end">#7C3AED</color>
 
     <style name="Theme.GemmaViolet" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowBackground">@color/bg</item>
