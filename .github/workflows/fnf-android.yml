@@ -90,7 +90,8 @@ jobs:
         run: |
           set -e
           mkdir -p out
-          APK=$(find export/release/android/bin/app/build/outputs/apk/release -name '*.apk' | head -n 1)
+          APK=$(find export/release/android/bin/app/build/outputs/apk -name '*.apk' | sort | tail -n 1)
+          [ -n "$APK" ] || { echo 'No APK was produced'; exit 1; }
           echo "Built: $APK"
           BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n 1)
           if [ -n "$KEYSTORE_BASE64" ]; then
