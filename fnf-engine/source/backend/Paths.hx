@@ -200,9 +200,55 @@ class Paths
 	{
 		#if MODS_ALLOWED
 		var file:String = modsVideo(key);
-		if(FileSystem.exists(file)) return file;
+		if(FileSystem.exists(file)) return native(file);
 		#end
-		return 'assets/videos/$key.$VIDEO_EXT';
+		return native('assets/videos/$key.$VIDEO_EXT');
+	}
+
+	#if sys
+	/** Loads an image from disk; falls back to decoding the bytes if the native loader fails. */
+	public static function bitmapFromFile(file:String):BitmapData
+	{
+		var bmp:BitmapData = null;
+		try bmp = BitmapData.fromFile(native(file)) catch (e:Dynamic) {}
+		if (bmp == null)
+		{
+			try bmp = BitmapData.fromBytes(openfl.utils.ByteArray.fromBytes(File.getBytes(file))) catch (e:Dynamic) trace('Could not load image $file: $e');
+		}
+		return bmp;
+	}
+
+	/** Loads a sound from disk; falls back to decoding the bytes if the native loader fails. */
+	public static function soundFromFile(file:String):Sound
+	{
+		var snd:Sound = null;
+		try snd = Sound.fromFile(native(file)) catch (e:Dynamic) {}
+		if (snd == null || snd.length <= 0)
+		{
+			try
+			{
+				var buffer = lime.media.AudioBuffer.fromBytes(File.getBytes(file));
+				if (buffer != null) snd = Sound.fromAudioBuffer(buffer);
+			}
+			catch (e:Dynamic) trace('Could not load sound $file: $e');
+		}
+		return snd;
+	}
+	#end
+
+	/**
+	 * Native loaders (images, sounds, videos) on Android treat relative paths as
+	 * files inside the APK, so files in the storage folder need a full path.
+	 */
+	public static function native(path:String):String
+	{
+		#if mobile
+		if (path == null || path.length == 0 || path.startsWith('/')) return path;
+		if (path.startsWith('./')) path = path.substr(2);
+		return mobile.StorageSetup.storageDir + path;
+		#else
+		return path;
+		#end
 	}
 
 	inline static public function sound(key:String, ?modsAllowed:Bool = true):Sound
@@ -245,7 +291,7 @@ class Paths
 			var file:String = getPath(key, IMAGE, parentFolder, true);
 			#if MODS_ALLOWED
 			if (FileSystem.exists(file))
-				bitmap = BitmapData.fromFile(file);
+				bitmap = bitmapFromFile(file);
 			else #end if (OpenFlAssets.exists(file, IMAGE))
 				bitmap = OpenFlAssets.getBitmapData(file);
 
@@ -430,7 +476,7 @@ class Paths
 		{
 			#if sys
 			if(FileSystem.exists(file))
-				currentTrackedSounds.set(file, Sound.fromFile(file));
+				currentTrackedSounds.set(file, soundFromFile(file));
 			#else
 			if(OpenFlAssets.exists(file, SOUND))
 				currentTrackedSounds.set(file, OpenFlAssets.getSound(file));

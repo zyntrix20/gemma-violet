@@ -775,7 +775,7 @@ class LoadingState extends MusicBeatState
 		{
 			if (#if sys FileSystem.exists(file) || #end OpenFlAssets.exists(file, SOUND))
 			{
-				var sound:Sound = #if sys Sound.fromFile(file) #else OpenFlAssets.getSound(file, false) #end;
+				var sound:Sound = #if sys Paths.soundFromFile(file) #else OpenFlAssets.getSound(file, false) #end;
 				mutex.acquire();
 				Paths.currentTrackedSounds.set(file, sound);
 				mutex.release();
@@ -808,7 +808,7 @@ class LoadingState extends MusicBeatState
 				if (#if sys FileSystem.exists(file) || #end OpenFlAssets.exists(file, IMAGE))
 				{
 					#if sys
-					var bitmap:BitmapData = BitmapData.fromFile(file);
+					var bitmap:BitmapData = Paths.bitmapFromFile(file);
 					#else
 					var bitmap:BitmapData = OpenFlAssets.getBitmapData(file, false);
 					#end
