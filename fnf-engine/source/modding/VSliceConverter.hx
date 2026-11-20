@@ -50,10 +50,12 @@ class VSliceConverter
 	var songMap:Map<String, Map<String, PsychSongEntry>> = [];
 	var charactersWithDeath:Array<String> = [];
 	var currentVariations:Array<String> = [];
+	var noteStyles:NoteStyleConverter;
 
 	public function new(ctx:ConvertContext)
 	{
 		this.ctx = ctx;
+		noteStyles = new NoteStyleConverter(ctx);
 	}
 
 	public function run():Void
@@ -429,8 +431,8 @@ class VSliceConverter
 		var opponent:String = ModFiles.field(chars, 'opponent', 'dad');
 		var girlfriend:String = ModFiles.field(chars, 'girlfriend', 'gf');
 		var stage = resolveStage(ModFiles.field(playData, 'stage', 'mainStage'));
-		var noteStyle:String = ModFiles.field(playData, 'noteStyle', 'funkin');
-		if (noteStyle == 'pixel' && !pixelStages.contains(stage)) pixelStages.push(stage);
+		var noteStyle = noteStyles.get(ModFiles.field(playData, 'noteStyle', 'funkin'));
+		if (noteStyle.pixel && !pixelStages.contains(stage)) pixelStages.push(stage);
 
 		// ---- audio
 		var audioDir = ctx.path('songs/$songFolder');
@@ -518,6 +520,7 @@ class VSliceConverter
 				format: 'psych_v1'
 			};
 			if (gameOverChar != null) song.gameOverChar = gameOverChar;
+			if (noteStyle.arrowSkin != null) song.arrowSkin = noteStyle.arrowSkin;
 			Reflect.setField(song, 'artist', ModFiles.field(meta, 'artist', ''));
 			Reflect.setField(song, 'charter', ModFiles.field(meta, 'charter', ''));
 			ModFiles.writeJson(ctx.path('data/$id/' + ConvertContext.chartFile(id, diff)), song);

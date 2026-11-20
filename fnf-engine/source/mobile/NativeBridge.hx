@@ -30,6 +30,9 @@ class NativeBridge
 	static var _getResult:Dynamic;
 	static var _reset:Dynamic;
 	static var _toast:Dynamic;
+	static var _inState:Dynamic;
+	static var _inResult:Dynamic;
+	static var _inReset:Dynamic;
 
 	static function jni(name:String, sig:String):Dynamic
 		return JNI.createStaticMethod(CLASS, name, sig);
@@ -98,6 +101,57 @@ class NativeBridge
 		_reset();
 		#elseif desktop
 		desktopState = IDLE;
+		#end
+	}
+
+	/** A mod archive opened from another app ("Open with" / "Share"). */
+	public static function pollIncoming():PickState
+	{
+		#if android
+		if (_inState == null)
+		{
+			_inState = jni("getIncomingState", "()I");
+			_inResult = jni("getIncomingResult", "()Ljava/lang/String;");
+			_inReset = jni("resetIncoming", "()V");
+		}
+		var state:Int = _inState();
+		return switch (state)
+		{
+			case 2: COPYING;
+			case 3: DONE(_inResult());
+			case 5: ERROR(_inResult());
+			default: IDLE;
+		}
+		#else
+		return IDLE;
+		#end
+	}
+
+	public static function resetIncoming():Void
+	{
+		#if android
+		if (_inReset != null) _inReset();
+		#end
+	}
+
+	/** Called every frame: opens the Mods screen when a mod was shared to the app. */
+	public static function checkIncoming():Void
+	{
+		#if android
+		var state = FlxG.state;
+		if (state == null || Std.isOfType(state, PlayState) || Std.isOfType(state, CopyState)) return;
+		switch (pollIncoming())
+		{
+			case DONE(path):
+				resetIncoming();
+				states.ModsHubState.pendingImport = path;
+				if (!Std.isOfType(state, states.ModsHubState))
+					MusicBeatState.switchState(new states.ModsHubState());
+			case ERROR(message):
+				resetIncoming();
+				toast(message);
+			default:
+		}
 		#end
 	}
 

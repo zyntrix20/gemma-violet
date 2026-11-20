@@ -146,6 +146,16 @@ class ModImporter
 				}
 
 				enableMod(folder);
+				try
+				{
+					ModFiles.writeJson(target + '_import.json', {
+						format: formatName(format),
+						archive: Path.withoutDirectory(zipPath),
+						date: Date.now().toString(),
+						warnings: ctx.warnings
+					});
+				}
+				catch (e:Dynamic) {}
 				var songNames = [for (s in ctx.songs) s.name];
 				if (songNames.length == 0) songNames = PsychFixer.listSongs(ctx);
 				imported.push({

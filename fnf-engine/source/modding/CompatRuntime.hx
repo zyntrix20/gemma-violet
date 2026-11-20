@@ -23,11 +23,15 @@ class CompatRuntime
 	static var zoomTween:FlxTween = null;
 	static var camTween:FlxTween = null;
 	static var leftRight:Map<String, Bool> = [];
+	static var bopRate:Int = 0; // 0 = Psych's default (every section)
+	static var bopIntensity:Float = 1;
 
 	public static function reset():Void
 	{
 		meta = null;
 		layoutActive = false;
+		bopRate = 0;
+		bopIntensity = 1;
 		leftRight.clear();
 		zoomTween = null;
 		camTween = null;
@@ -224,15 +228,63 @@ class CompatRuntime
 				if (v != null && !Std.isOfType(v, String) && !Std.isOfType(v, Float))
 				{
 					var intensity = ModFiles.toFloat(ModFiles.field(v, 'intensity'), 1);
-					var rate = ModFiles.toFloat(ModFiles.field(v, 'rate'), 4);
-					game.camZoomingMult = rate <= 0 ? 0 : intensity;
+					var rate = Std.int(ModFiles.toFloat(ModFiles.field(v, 'rate'), 4));
+					if (rate <= 0)
+					{
+						bopRate = 0;
+						game.camZoomingMult = 0;
+					}
+					else if (rate == 4)
+					{
+						bopRate = 0;
+						game.camZoomingMult = intensity;
+					}
+					else
+					{
+						// custom bop speed: Psych only bops per section, so do it here
+						bopRate = rate;
+						bopIntensity = intensity;
+						game.camZoomingMult = 0;
+					}
 				}
+
+			case 'SetHealthIcon':
+				var v:Dynamic = parse(value1);
+				if (v != null && !Std.isOfType(v, String) && !Std.isOfType(v, Float))
+				{
+					var id:String = ModFiles.field(v, 'id');
+					var charId = Std.int(ModFiles.toFloat(ModFiles.field(v, 'char'), 0));
+					if (id != null) (charId == 0 ? game.iconP1 : game.iconP2).changeIcon(id);
+				}
+
+			case 'CameraFlash':
+				var v:Dynamic = parse(value1);
+				var color:FlxColor = FlxColor.WHITE;
+				var duration:Float = 1;
+				var hud = false;
+				if (v != null && !Std.isOfType(v, String) && !Std.isOfType(v, Float))
+				{
+					var c:Dynamic = ModFiles.field(v, 'color');
+					if (c != null)
+					{
+						var rgb = ModFiles.colorToRGB(c, [255, 255, 255]);
+						color = FlxColor.fromRGB(rgb[0], rgb[1], rgb[2]);
+					}
+					duration = ModFiles.toFloat(ModFiles.field(v, 'duration'), 1);
+					hud = ModFiles.toBool(ModFiles.field(v, 'hud'), false);
+				}
+				if (ClientPrefs.data.flashing) (hud ? game.camHUD : game.camGame).flash(color, duration / game.playbackRate, null, true);
 		}
 	}
 
 	/** Makes props marked with "danceEvery" bop to the beat, like in V-Slice. */
 	public static function onBeat(game:PlayState, beat:Int):Void
 	{
+		if (bopRate > 0 && beat % bopRate == 0 && game.camZooming && ClientPrefs.data.camZooms && FlxG.camera.zoom < 1.35)
+		{
+			FlxG.camera.zoom += 0.015 * bopIntensity;
+			game.camHUD.zoom += 0.03 * bopIntensity;
+		}
 		if (meta == null) return;
 		var dancers:Array<Dynamic> = ModFiles.field(meta, 'dancers');
 		if (dancers == null) return;

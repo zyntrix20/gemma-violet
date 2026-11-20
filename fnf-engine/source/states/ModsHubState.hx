@@ -11,7 +11,7 @@ import modding.ModImporter;
  */
 class ModsHubState extends MusicBeatState
 {
-	static final OPTIONS:Array<String> = ['IMPORT MOD (.ZIP)', 'MANAGE MODS', 'FREEPLAY', 'BACK'];
+	static final OPTIONS:Array<String> = ['IMPORT MOD (.ZIP)', 'MY MODS', 'MOD ORDER', 'FREEPLAY', 'BACK'];
 
 	var bg:FlxSprite;
 	var buttons:Array<FlxSprite> = [];
@@ -33,10 +33,14 @@ class ModsHubState extends MusicBeatState
 	var showingResult:Bool = false;
 	var lastImport:ImportResult = null;
 
+	/** Archive shared from another app, imported as soon as this screen is idle. */
+	public static var pendingImport:String = null;
+
 	override function create()
 	{
 		super.create();
 		persistentUpdate = true;
+		modding.ImageComposer.install();
 
 		#if DISCORD_ALLOWED
 		DiscordClient.changePresence("Mods Menu", null);
@@ -53,7 +57,7 @@ class ModsHubState extends MusicBeatState
 
 		for (i => option in OPTIONS)
 		{
-			var btn = FlxSpriteUtil.drawRoundRect(new FlxSprite(60, 170 + i * 105).makeGraphic(520, 85, FlxColor.TRANSPARENT), 0, 0, 520, 85, 20, 20, FlxColor.BLACK);
+			var btn = FlxSpriteUtil.drawRoundRect(new FlxSprite(60, 160 + i * 100).makeGraphic(520, 85, FlxColor.TRANSPARENT), 0, 0, 520, 85, 20, 20, FlxColor.BLACK);
 			btn.alpha = 0.55;
 			add(btn);
 			buttons.push(btn);
@@ -148,6 +152,14 @@ class ModsHubState extends MusicBeatState
 			updatePicker();
 			return;
 		}
+		if (pendingImport != null && importer == null)
+		{
+			var path = pendingImport;
+			pendingImport = null;
+			showingResult = false;
+			startImport(path);
+			return;
+		}
 		if (importer != null)
 		{
 			updateImport();
@@ -200,8 +212,11 @@ class ModsHubState extends MusicBeatState
 				startPicker();
 			case 1:
 				FlxG.sound.play(Paths.sound('confirmMenu'));
-				MusicBeatState.switchState(new ModsMenuState());
+				MusicBeatState.switchState(new ModListState());
 			case 2:
+				FlxG.sound.play(Paths.sound('confirmMenu'));
+				MusicBeatState.switchState(new ModsMenuState());
+			case 3:
 				FlxG.sound.play(Paths.sound('confirmMenu'));
 				openFreeplay();
 			default:

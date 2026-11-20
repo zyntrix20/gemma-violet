@@ -195,6 +195,8 @@
 	<section if="android">
 		<!-- native helper: storage folder + system file picker for importing mods -->
 		<dependency name="modtools" path="android/modtools" />
+		<!-- AndroidManifest with "Open with" / "Share" support for .zip files -->
+		<template path="templates" />
 		<android extension="org.funkinmods.engine.ModTools" />
 		<android minimum-sdk-version="21" />
 		<android target-sdk-version="30" />

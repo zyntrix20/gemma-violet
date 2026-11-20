@@ -38,6 +38,11 @@ public class ModTools extends Extension {
 	private static volatile int pickState = STATE_IDLE;
 	private static volatile String pickResult = "";
 
+	// files opened from other apps ("Open with" / "Share")
+	private static volatile int incomingState = STATE_IDLE;
+	private static volatile String incomingResult = "";
+	private static String lastIncomingUri = null;
+
 	public static String getStorageDir() {
 		try {
 			File dir = mainContext.getExternalFilesDir(null);
@@ -90,6 +95,59 @@ public class ModTools extends Extension {
 		pickResult = "";
 	}
 
+	public static int getIncomingState() {
+		return incomingState;
+	}
+
+	public static String getIncomingResult() {
+		return incomingResult;
+	}
+
+	public static void resetIncoming() {
+		incomingState = STATE_IDLE;
+		incomingResult = "";
+	}
+
+	@Override
+	public void onCreate(android.os.Bundle savedInstanceState) {
+		if (mainActivity != null) handleIntent(mainActivity.getIntent());
+	}
+
+	@Override
+	public void onNewIntent(Intent intent) {
+		handleIntent(intent);
+	}
+
+	private static void handleIntent(Intent intent) {
+		if (intent == null) return;
+		Uri uri = null;
+		try {
+			if (Intent.ACTION_VIEW.equals(intent.getAction())) uri = intent.getData();
+			else if (Intent.ACTION_SEND.equals(intent.getAction())) uri = (Uri) intent.getParcelableExtra(Intent.EXTRA_STREAM);
+		} catch (Throwable e) {
+			Log.e(TAG, "Bad incoming intent", e);
+		}
+		if (uri == null) return;
+		final String key = uri.toString();
+		if (key.equals(lastIncomingUri)) return;
+		lastIncomingUri = key;
+
+		final Uri target = uri;
+		incomingState = STATE_COPYING;
+		new Thread(new Runnable() {
+			@Override public void run() {
+				try {
+					incomingResult = copyUri(target);
+					incomingState = STATE_DONE;
+				} catch (Throwable e) {
+					Log.e(TAG, "Incoming copy failed", e);
+					incomingResult = "Could not read the file: " + e.getMessage();
+					incomingState = STATE_ERROR;
+				}
+			}
+		}).start();
+	}
+
 	public static void toast(final String text) {
 		mainActivity.runOnUiThread(new Runnable() {
 			@Override public void run() {
@@ -118,6 +176,18 @@ public class ModTools extends Extension {
 	}
 
 	private static void copyToImportFolder(Uri uri) {
+		try {
+			pickResult = copyUri(uri);
+			pickState = STATE_DONE;
+		} catch (Throwable e) {
+			Log.e(TAG, "Copy failed", e);
+			pickResult = "Could not read the file: " + e.getMessage();
+			pickState = STATE_ERROR;
+		}
+	}
+
+	/** Copies a content:// or file:// document into <storage>/import/ and returns the new path. */
+	private static String copyUri(Uri uri) throws Exception {
 		InputStream in = null;
 		OutputStream out = null;
 		try {
@@ -136,13 +206,7 @@ public class ModTools extends Extension {
 			int read;
 			while ((read = in.read(buffer)) != -1) out.write(buffer, 0, read);
 			out.flush();
-
-			pickResult = target.getAbsolutePath();
-			pickState = STATE_DONE;
-		} catch (Throwable e) {
-			Log.e(TAG, "Copy failed", e);
-			pickResult = "Could not read the file: " + e.getMessage();
-			pickState = STATE_ERROR;
+			return target.getAbsolutePath();
 		} finally {
 			try { if (in != null) in.close(); } catch (Throwable ignored) {}
 			try { if (out != null) out.close(); } catch (Throwable ignored) {}

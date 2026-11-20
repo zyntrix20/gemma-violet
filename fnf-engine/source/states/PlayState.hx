@@ -629,6 +629,7 @@ class PlayState extends MusicBeatState
 
 		stagesFunc(function(stage:BaseStage) stage.createPost());
 		callOnScripts('onCreatePost');
+		showMissingFiles();
 		
 		var splash:NoteSplash = new NoteSplash();
 		grpNoteSplashes.add(splash);
@@ -690,6 +691,20 @@ class PlayState extends MusicBeatState
 	}
 
 	#if (LUA_ALLOWED || HSCRIPT_ALLOWED)
+	/** Lists files the song needed but the mod does not contain, instead of failing silently. */
+	function showMissingFiles()
+	{
+		#if (LUA_ALLOWED || HSCRIPT_ALLOWED)
+		var missing = Paths.missingFiles;
+		if (missing.length == 0) return;
+		var shown = missing.slice(0, 6);
+		for (f in shown) addTextToDebug('Missing file: ' + f, 0xFFFFA040);
+		if (missing.length > shown.length)
+			addTextToDebug('...and ${missing.length - shown.length} more (see logs/missing_files.txt)', 0xFFFFA040);
+		Paths.missingFiles = [];
+		#end
+	}
+
 	public function addTextToDebug(text:String, color:FlxColor) {
 		var newText:psychlua.DebugLuaText = luaDebugGroup.recycle(psychlua.DebugLuaText);
 		newText.text = text;

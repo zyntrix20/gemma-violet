@@ -638,6 +638,17 @@ class CodenameConverter
 					var ease = Std.string(p[4] != null ? p[4] : 'linear') + Std.string(p[5] != null && p[5] != 'NONE' ? p[5] : '');
 					var mode = Std.string(p[6] != null ? p[6] : 'direct');
 					['ZoomCamera', Json.stringify({zoom: zoom, duration: tween ? steps : 0, ease: tween ? ease : 'INSTANT', mode: mode == 'stage' ? 'stage' : 'direct'}), ''];
+				case 'Camera Flash':
+					// params: [reversed, color, time (seconds), camera]
+					var color = p.length > 1 ? Std.string(p[1]) : '#FFFFFF';
+					var hud = p.length > 3 && Std.string(p[3]).toLowerCase().indexOf('hud') >= 0;
+					['CameraFlash', Json.stringify({color: color, duration: ModFiles.toFloat(p[2], 1), hud: hud, reversed: ModFiles.toBool(p[0], false)}), ''];
+				case 'Camera Modulo Change':
+					// params: [bop every N beats, intensity]
+					['SetCameraBop', Json.stringify({rate: ModFiles.toFloat(p[0], 4), intensity: ModFiles.toFloat(p[1], 1)}), ''];
+				case 'Alt Animation Toggle':
+					// params: [alt sing, alt idle, strumline]
+					['Alt Idle Animation', targetOf(p[2]), ModFiles.toBool(p[1], false) ? '-alt' : ''];
 				default:
 					[name, p.length > 0 ? Std.string(p[0]) : '', p.length > 1 ? Std.string(p[1]) : ''];
 			}

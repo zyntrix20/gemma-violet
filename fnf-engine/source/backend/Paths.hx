@@ -205,6 +205,26 @@ class Paths
 		return native('assets/videos/$key.$VIDEO_EXT');
 	}
 
+	/** Files that a song or menu asked for but could not be found (shown in-game). */
+	public static var missingFiles:Array<String> = [];
+
+	public static function reportMissing(file:String):Void
+	{
+		if (file == null || missingFiles.contains(file)) return;
+		missingFiles.push(file);
+		#if sys
+		try
+		{
+			if (!FileSystem.exists('logs')) FileSystem.createDirectory('logs');
+			var mod = Mods.currentModDirectory != null && Mods.currentModDirectory.length > 0 ? Mods.currentModDirectory : 'base';
+			var f = File.append('logs/missing_files.txt', false);
+			f.writeString('[$mod] $file\n');
+			f.close();
+		}
+		catch (e:Dynamic) {}
+		#end
+	}
+
 	#if sys
 	/** Loads an image from disk; falls back to decoding the bytes if the native loader fails. */
 	public static function bitmapFromFile(file:String):BitmapData
@@ -298,6 +318,7 @@ class Paths
 			if (bitmap == null)
 			{
 				trace('Bitmap not found: $file | key: $key');
+				reportMissing(key);
 				return null;
 			}
 		}
@@ -483,6 +504,7 @@ class Paths
 			#end
 			else if(beepOnNull)
 			{
+				reportMissing(key + '.$SOUND_EXT');
 				trace('SOUND NOT FOUND: $key, PATH: $path');
 				FlxG.log.error('SOUND NOT FOUND: $key, PATH: $path');
 				return FlxAssets.getSound('flixel/sounds/beep');

@@ -170,6 +170,9 @@ class Main extends Sprite
 		#if TOUCH_CONTROLS
 		mobile.TouchOverlay.init();
 		#end
+		#if android
+		FlxG.signals.postUpdate.add(mobile.NativeBridge.checkIncoming);
+		#end
 
 		#if html5
 		FlxG.autoPause = false;
