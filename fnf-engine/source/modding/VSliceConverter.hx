@@ -2,6 +2,7 @@ package modding;
 
 import haxe.Json;
 import modding.ConvertContext.PsychSongEntry;
+import modding.ScriptTranslator.TranslatedScript;
 
 using StringTools;
 
@@ -847,15 +848,56 @@ class VSliceConverter
 	function reportScripts():Void
 	{
 		var scripts = ModFiles.walk(ctx.path('scripts')).filter(f -> f.endsWith('.hxc') || f.endsWith('.hx'));
-		if (scripts.length > 0)
-			ctx.warn('${scripts.length} V-Slice script(s) (.hxc) were skipped: custom cutscenes and mechanics from them will not play.');
-		// Psych would try to run V-Slice scripts from scripts/ and fail; move them aside
-		if (ModFiles.isDir(ctx.path('scripts')))
+		if (scripts.length == 0) return;
+
+		var manifest:Dynamic = {engine: 'vslice', songs: {}, stages: {}, characters: {}, global: [], events: {}, noteTypes: {}};
+		function push(mapName:String, key:String, file:String)
 		{
-			for (f in ModFiles.walk(ctx.path('scripts')))
-				if (f.endsWith('.hxc') || f.endsWith('.hx'))
-					ModFiles.move(ctx.path('scripts/$f'), ctx.path('_vslice_scripts/$f'));
-			ModFiles.pruneEmpty(ctx.path('scripts'));
+			var map:Dynamic = Reflect.field(manifest, mapName);
+			var list:Array<String> = Reflect.field(map, key);
+			if (list == null) Reflect.setField(map, key, list = []);
+			if (!list.contains(file)) list.push(file);
 		}
+
+		var converted = 0;
+		var skipped = 0;
+		for (f in scripts)
+		{
+			var src = ModFiles.readText(ctx.path('scripts/$f'));
+			// keep the original out of Psych's own scripts folder
+			ModFiles.move(ctx.path('scripts/$f'), ctx.path('_vslice_scripts/$f'));
+			var t:TranslatedScript = null;
+			try t = ScriptTranslator.translate(src) catch (e:Dynamic) {}
+			if (t == null || t.kind == 'other' || t.kind == 'character')
+			{
+				skipped++;
+				continue;
+			}
+			var out = '_compat/vslice/' + (f.endsWith('.hxc') ? f.substr(0, f.length - 4) : f.substr(0, f.length - 3)) + '.hx';
+			ModFiles.writeText(ctx.path(out), t.code);
+			converted++;
+			switch (t.kind)
+			{
+				case 'song':
+					var entries = songMap.get(t.id);
+					if (entries == null) push('songs', ModFiles.formatSong(t.id), out);
+					else for (e in entries) push('songs', e.id, out);
+				case 'stage':
+					push('stages', t.id, out);
+					if (STAGE_RENAMES.exists(t.id)) push('stages', STAGE_RENAMES.get(t.id), out);
+				case 'event':
+					push('events', t.id, out);
+				case 'notekind':
+					push('noteTypes', t.id, out);
+				default:
+					(manifest.global : Array<String>).push(out);
+			}
+		}
+		ModFiles.pruneEmpty(ctx.path('scripts'));
+		if (converted > 0) ModFiles.writeJson(ctx.path('_compat/scripts.json'), manifest);
+		if (converted > 0)
+			ctx.warn('$converted V-Slice script(s) were translated to run here. Simple effects work; scripts that rely on V-Slice-only features may not.');
+		if (skipped > 0)
+			ctx.warn('$skipped V-Slice script(s) (custom characters/classes) could not be translated.');
 	}
 }

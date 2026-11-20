@@ -735,11 +735,67 @@ class CodenameConverter
 
 	function reportScripts():Void
 	{
-		var scripts = ModFiles.walk(ctx.modDir).filter(f -> f.endsWith('.hx') && !f.startsWith('_codename_scripts/'));
+		var scripts = ModFiles.walk(ctx.modDir).filter(f -> f.endsWith('.hx') && !f.startsWith('_codename_scripts/') && !f.startsWith('_compat/'));
 		if (scripts.length == 0) return;
-		ctx.warn('${scripts.length} Codename script(s) (.hx) were skipped: they use a different API than Psych Engine.');
-		// keep Psych from trying to run them
+
+		var manifest:Dynamic = {engine: 'codename', songs: {}, stages: {}, characters: {}, global: [], events: {}, noteTypes: {}};
+		function push(mapName:String, key:String, file:String)
+		{
+			var map:Dynamic = Reflect.field(manifest, mapName);
+			var list:Array<String> = Reflect.field(map, key);
+			if (list == null) Reflect.setField(map, key, list = []);
+			if (!list.contains(file)) list.push(file);
+		}
+
+		var used = 0;
 		for (f in scripts)
-			ModFiles.move(ctx.path(f), ctx.path('_codename_scripts/$f'));
+		{
+			var target = '_codename_scripts/$f';
+			// keep Psych from running them with its own API
+			ModFiles.move(ctx.path(f), ctx.path(target));
+			var parts = f.split('/');
+			var file = parts[parts.length - 1];
+			var name = file.substr(0, file.length - 3);
+			var lower = f.toLowerCase();
+			if (lower.startsWith('songs/') && parts.length >= 3)
+			{
+				var entry = songsByFolder.get(parts[1].toLowerCase());
+				push('songs', entry != null ? entry.id : ModFiles.formatSong(parts[1]), target);
+				used++;
+			}
+			else if (lower.startsWith('data/stages/'))
+			{
+				push('stages', name, target);
+				if (STAGE_RENAMES.exists(name)) push('stages', STAGE_RENAMES.get(name), target);
+				used++;
+			}
+			else if (lower.startsWith('data/characters/'))
+			{
+				push('characters', name, target);
+				used++;
+			}
+			else if (lower.startsWith('data/events/'))
+			{
+				push('events', name, target);
+				used++;
+			}
+			else if (lower.startsWith('data/notes/'))
+			{
+				push('noteTypes', name, target);
+				used++;
+			}
+			else if (lower == 'data/global.hx' || lower.startsWith('data/scripts/') || lower.startsWith('scripts/'))
+			{
+				(manifest.global : Array<String>).push(target);
+				used++;
+			}
+		}
+		if (used > 0)
+		{
+			ModFiles.writeJson(ctx.path('_compat/scripts.json'), manifest);
+			ctx.warn('$used Codename script(s) will run through the compatibility layer. Simple ones work; scripts that use Codename-only features may not.');
+		}
+		if (scripts.length > used)
+			ctx.warn('${scripts.length - used} Codename script(s) (menus/states) are not used in songs and were skipped.');
 	}
 }

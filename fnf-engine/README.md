@@ -19,10 +19,15 @@ It ships **without songs**: every song comes from a mod that you import on the p
   The Android back button works as Back / Pause.
 - Default characters, stages and menu art are included, so mods that rely on `bf`, `gf`, `dad`, `stage`… work.
 
-### Limits
+### Scripts from other engines
 
-- V-Slice scripts (`.hxc`) and Codename scripts (`.hx`) use APIs that don't exist in Psych Engine, so they are
-  skipped. Songs, charts, characters and stages still work. Custom cutscenes and mechanics from those scripts won't play.
+- **Codename Engine** scripts (`.hx`) run through a compatibility layer: Codename callback names
+  (`create`, `postCreate`, `beatHit`, `onPlayerHit`, `onDadHit`, `onEvent`, `onStartCountdown`…) are mapped
+  to Psych's, and common helpers (`stage.getSprite`, stage sprites by name, `strumLines`) are provided.
+- **V-Slice** scripts (`.hxc` classes) are translated at import into plain HScript and run with V-Slice-like helpers
+  (`PlayState.instance.currentStage.getNamedProp`, `Conductor.instance`, `FunkinSprite`, `VideoCutscene.play`…).
+- Simple stage effects, cutscene timers and animation triggers usually work. Scripts that depend on engine
+  internals that Psych doesn't have will show an error line in the song and are switched off instead of crashing.
 - Mods that change the engine's **source code** (distributed only as compiled `.exe` builds) cannot be loaded.
 - `.rar` / `.7z` archives must be re-packed as `.zip`.
 
