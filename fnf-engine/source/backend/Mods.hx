@@ -228,12 +228,9 @@ class Mods
 
 	public static function loadTopMod()
 	{
+		// Mods stay independent: menus use the engine's own files, and a mod's
+		// files are only used while one of its songs is playing (Freeplay and
+		// Story Mode set the directory of the selected week).
 		Mods.currentModDirectory = '';
-		
-		#if MODS_ALLOWED
-		var list:Array<String> = Mods.parseList().enabled;
-		if(list != null && list[0] != null)
-			Mods.currentModDirectory = list[0];
-		#end
 	}
 }

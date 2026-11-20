@@ -123,8 +123,16 @@ class ModImporter
 				ModFiles.ensureDir(target);
 
 				say('Extracting "$name" (${formatName(format)} mod)...');
+				var skippedBase = 0;
 				for (f in root.files)
 				{
+					// full game builds carry the whole base game: don't store copies of files the engine already has
+					if (root.build && sameAsBase(f.rel, f.entry.size))
+					{
+						skippedBase++;
+						doneBytes += f.entry.size;
+						continue;
+					}
 					var dst = target + f.rel;
 					ModFiles.ensureDir(Path.directory(dst));
 					File.saveBytes(dst, archive.read(f.entry));
@@ -142,8 +150,10 @@ class ModImporter
 						say('Converting Codename files for "$name"...');
 						new CodenameConverter(ctx).run();
 					case PSYCH:
-						PsychFixer.run(ctx);
 				}
+				// every song in Freeplay, weeks unlocked, mod kept independent
+				PsychFixer.run(ctx);
+				if (skippedBase > 0) log.push('Skipped $skippedBase file(s) identical to the built-in game files.');
 
 				enableMod(folder);
 				try
@@ -156,8 +166,8 @@ class ModImporter
 					});
 				}
 				catch (e:Dynamic) {}
-				var songNames = [for (s in ctx.songs) s.name];
-				if (songNames.length == 0) songNames = PsychFixer.listSongs(ctx);
+				var songNames = PsychFixer.listSongs(ctx);
+				for (s in ctx.songs) if (!songNames.contains(s.name)) songNames.push(s.name);
 				imported.push({
 					folder: folder,
 					name: name,
@@ -266,7 +276,8 @@ class ModImporter
 		for (p in chosen)
 		{
 			var build = candidates.get(p);
-			if (build && chosen.filter(o -> o != p && o.startsWith(p)).length > 0) continue;
+			// skip it only if its assets hold no songs at all
+			if (build && chosen.filter(o -> o != p && o.startsWith(p)).length > 0 && !buildHasCharts(archive, p)) continue;
 			var files:Array<{entry:ZipEntry, rel:String}> = [];
 			for (e in archive.entries)
 			{
@@ -300,6 +311,28 @@ class ModImporter
 			for (f in r.files) f.rel = stripLibrary(f.rel, false);
 		}
 		return roots;
+	}
+
+	static function buildHasCharts(archive:ZipArchive, prefix:String):Bool
+	{
+		var chart = ~/assets\/(?:[^\/]+\/)*data\/(?:songs\/)?[^\/]+\/[^\/]+\.json$/i;
+		for (e in archive.entries)
+			if (e.name.startsWith(prefix) && chart.match(e.name.substr(prefix.length))) return true;
+		return false;
+	}
+
+	/** True if the engine already ships this exact file (same path and size). */
+	static function sameAsBase(rel:String, size:Int):Bool
+	{
+		for (candidate in ['assets/shared/' + rel, 'assets/' + rel])
+		{
+			try
+			{
+				if (FileSystem.exists(candidate) && FileSystem.stat(candidate).size == size) return true;
+			}
+			catch (e:Dynamic) {}
+		}
+		return false;
 	}
 
 	static function stripLibrary(rel:String, build:Bool):String

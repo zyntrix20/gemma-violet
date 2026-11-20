@@ -162,7 +162,7 @@ class HScript extends Iris
 		set('PlayState', PlayState);
 		set('Paths', Paths);
 		set('Conductor', Conductor);
-		set('ClientPrefs', ClientPrefs);
+		set('ClientPrefs', new LegacyNames.LegacyClientPrefs());
 		#if ACHIEVEMENTS_ALLOWED
 		set('Achievements', Achievements);
 		#end

@@ -170,6 +170,7 @@ class Main extends Sprite
 		#if TOUCH_CONTROLS
 		mobile.TouchOverlay.init();
 		#end
+		psychlua.LegacyNames.install();
 		#if android
 		FlxG.signals.postUpdate.add(mobile.NativeBridge.checkIncoming);
 		#end

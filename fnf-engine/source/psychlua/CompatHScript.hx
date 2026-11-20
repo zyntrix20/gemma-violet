@@ -84,6 +84,35 @@ class CompatHScript extends HScript
 				set('PlayState', PlayState);
 				set('player', {characters: [game.boyfriend]});
 				set('cpu', {characters: [game.dad]});
+				set('__script__', this);
+				set('CustomShader', CompatClasses.CompatCustomShader);
+				set('FunkinShader', CompatClasses.CompatCustomShader);
+				set('GameOverSubstate', substates.GameOverSubstate);
+				set('Options', {
+					flashingMenu: ClientPrefs.data.flashing,
+					lowMemoryMode: ClientPrefs.data.lowQuality,
+					camZoomOnBeat: ClientPrefs.data.camZooms,
+					downscroll: ClientPrefs.data.downScroll,
+					middlescroll: ClientPrefs.data.middleScroll,
+					antialiasing: ClientPrefs.data.antialiasing,
+					gameplayShaders: ClientPrefs.data.shaders,
+					ghostTapping: ClientPrefs.data.ghostTapping,
+					naughtyness: true
+				});
+				set('camZoomingStrength', 1.0);
+				set('camZoomingInterval', 4);
+				set('maxCamZoom', 1.35);
+				set('playCutscenes', PlayState.isStoryMode);
+				set('enableCameraHacks', false);
+				set('curCameraTarget', 0);
+				set('curBeatFloat', 0.0);
+				set('curStepFloat', 0.0);
+				set('inst', FlxG.sound.music);
+				set('vocals', game.vocals);
+				set('scrollSpeed', game.songSpeed);
+				set('isStoryMode', PlayState.isStoryMode);
+				set('difficulty', Difficulty.getString(false));
+				set('SONG', PlayState.SONG);
 			case VSLICE:
 				var shim = new VSlicePlayStateShim(game);
 				set('PlayState', {instance: shim});
@@ -123,6 +152,58 @@ class CompatHScript extends HScript
 					isPlaying: function() return game.videoCutscene != null
 				});
 				set('HapticUtil', {vibrate: function(?a, ?b, ?c, ?d) {}, vibrateByPreset: function(?a) {}});
+				var noop = Reflect.makeVarArgs(function(_) return null);
+				for (name in ['AdjustColorShader', 'WiggleEffectRuntime', 'RuntimeRainShader', 'DropShadowShader', 'BuildingEffectShader',
+					'OverlayBlend', 'SserafimShader', 'BlendModeEffect', 'RuntimePostEffectShader', 'GaussianBlurShader', 'ScreenWipeShader'])
+					if (!exists(name)) set(name, CompatClasses.CompatDummyShader);
+				set('StageProp', FlxSprite);
+				set('FunkinSpriteBase', FlxSprite);
+				set('Sequence', CompatClasses.CompatSequence);
+				set('id', game.songName);
+				set('variation', '');
+				set('refresh', noop);
+				set('Constants', {
+					DEFAULT_DIFFICULTY: 'normal',
+					DEFAULT_VARIATION: 'default',
+					DEFAULT_CHARACTER: 'bf',
+					DEFAULT_STAGE: 'mainStage',
+					DEFAULT_SONG: 'tutorial',
+					PIXEL_ART_SCALE: 6,
+					COUNTDOWN_VOLUME: 0.6,
+					HEALTH_MAX: 2.0,
+					HEALTH_STARTING: 1.0,
+					HEALTH_MIN: 0.0
+				});
+				set('Preferences', {
+					flashingLights: ClientPrefs.data.flashing,
+					naughtyness: true,
+					downscroll: ClientPrefs.data.downScroll,
+					zoomCamera: ClientPrefs.data.camZooms,
+					autoPause: ClientPrefs.data.autoPause,
+					framerate: ClientPrefs.data.framerate,
+					lockedSubtitles: false,
+					subtitles: false,
+					vibration: 0,
+					strumlineBackgroundOpacity: 0
+				});
+				set('FunkinMemory', {
+					cacheTexture: noop, cacheSound: noop, cacheMusic: noop, purgeCache: noop, preparePurgeCache: noop,
+					permanentCacheTexture: noop, clearFreeplay: noop, clearStickers: noop
+				});
+				set('CharacterType', {BF: 'bf', DAD: 'dad', GF: 'gf', OTHER: 'other'});
+				set('CutsceneType', {STARTING: 'starting', MIDSONG: 'midsong', ENDING: 'ending'});
+				set('WiggleEffectType', {DREAMY: 0, WAVY: 1, HEAT_WAVE_HORIZONTAL: 2, HEAT_WAVE_VERTICAL: 3, FLAG: 4});
+				set('FullScreenScaleMode', {wideScale: {x: 1, y: 1}, gameCutoutSize: {x: 0, y: 0}, hasFakeCutouts: false, enabled: false});
+				set('RetroCameraFade', {fadeWhite: noop, fadeBlack: noop, fadeToBlack: noop, fadeFromBlack: noop});
+				set('FlxTweenUtil', {pauseTween: noop, resumeTween: noop, pauseTweensOf: noop, resumeTweensOf: noop});
+				set('GameOverSubState', {instance: null, reset: noop, musicSuffix: '', blueBallSuffix: ''});
+				set('PauseSubState', {musicSuffix: '', reset: noop});
+				set('MathUtil', {
+					lerp: function(a:Float, b:Float, r:Float) return a + (b - a) * r,
+					coolLerp: function(a:Float, b:Float, r:Float) return a + (b - a) * r,
+					smoothLerp: function(a:Float, b:Float, elapsed:Float, duration:Float, ?precision:Float) return a + (b - a) * Math.min(1, elapsed / Math.max(0.0001, duration)),
+					smoothLerpPrecision: function(a:Float, b:Float, elapsed:Float, duration:Float, ?precision:Float) return a + (b - a) * Math.min(1, elapsed / Math.max(0.0001, duration))
+				});
 		}
 	}
 
@@ -268,6 +349,11 @@ class CompatHScript extends HScript
 	override function call(funcToRun:String, ?args:Array<Dynamic>):crowplexus.iris.Iris.IrisCall
 	{
 		if (!active || interp == null) return null;
+		if (engine == CODENAME && funcToRun == 'onUpdate')
+		{
+			interp.variables.set('curBeatFloat', Conductor.songPosition / Conductor.crochet);
+			interp.variables.set('curStepFloat', Conductor.songPosition / Conductor.stepCrochet);
+		}
 		var cancelled = false;
 		var result:crowplexus.iris.Iris.IrisCall = null;
 		for (target in targets(funcToRun, args != null ? args : []))
@@ -296,22 +382,43 @@ class CompatHScript extends HScript
 	{
 		try
 		{
-			return super.call(name, args);
+			var func:Dynamic = interp.variables.get(name);
+			if (func == null) return null;
+			var ret = Reflect.callMethod(null, func, args != null ? args : []);
+			return {funName: name, signature: func, returnValue: ret};
+		}
+		catch (e:IrisError)
+		{
+			reportError(name, Printer.errorToString(e, false));
 		}
 		catch (e:Dynamic)
 		{
-			errors++;
-			var file = filePath != null ? haxe.io.Path.withoutDirectory(filePath) : 'script';
-			if (PlayState.instance != null && errors <= 3)
-				PlayState.instance.addTextToDebug('[$file] $name: ' + Std.string(e).split('\n')[0], 0xFFFF8080);
-			if (errors >= 10)
-			{
-				active = false;
-				if (PlayState.instance != null) PlayState.instance.addTextToDebug('[$file] disabled after repeated errors', 0xFFFF8080);
-			}
+			reportError(name, Std.string(e));
 		}
 		return null;
 	}
+
+	function reportError(name:String, msg:String)
+	{
+		errors++;
+		var file = filePath != null ? haxe.io.Path.withoutDirectory(filePath) : 'script';
+		var line = msg.split('\n')[0];
+		// show each distinct error once
+		if (PlayState.instance != null && !shownErrors.contains(line) && shownErrors.length < 3)
+		{
+			shownErrors.push(line);
+			PlayState.instance.addTextToDebug('[$file] $name: $line', 0xFFFF8080);
+		}
+		trace('[$file] $name: $msg');
+		// a script that keeps failing every frame is switched off
+		if (errors >= 30)
+		{
+			active = false;
+			if (PlayState.instance != null) PlayState.instance.addTextToDebug('[$file] turned off (too many errors)', 0xFFFF8080);
+		}
+	}
+
+	var shownErrors:Array<String> = [];
 }
 
 /** The parts of V-Slice's PlayState that scripts use most, mapped onto Psych's. */
@@ -332,6 +439,21 @@ class VSlicePlayStateShim
 	public var currentSong(get, never):Dynamic;
 	public var iconP1(get, never):objects.HealthIcon;
 	public var iconP2(get, never):objects.HealthIcon;
+	public var camCutscene(get, never):FlxCamera;
+	public var mayPauseGame(get, set):Bool;
+	public var controls(get, never):Controls;
+	public var vocals(get, never):FlxSound;
+	public var isPracticeMode(get, never):Bool;
+	public var opponentStrumline(get, never):Dynamic;
+	public var playerStrumline(get, never):Dynamic;
+	public var isChartingMode:Bool = false;
+	public var isMinimalMode:Bool = false;
+	public var justUnpaused:Bool = false;
+	public var disableKeys:Bool = false;
+	public var subtitles:Dynamic = null;
+	public var comboPopUps:Dynamic = null;
+	public var currentVariation:String = 'default';
+	public var currentDifficulty(get, never):String;
 
 	public function new(game:PlayState)
 	{
@@ -355,6 +477,30 @@ class VSlicePlayStateShim
 	function get_currentSong() return {id: game.songName, songName: PlayState.SONG.song};
 	function get_iconP1() return game.iconP1;
 	function get_iconP2() return game.iconP2;
+	function get_camCutscene() return game.camOther;
+	function get_mayPauseGame() return Reflect.getProperty(game, 'canPause') == true;
+	function set_mayPauseGame(v:Bool) { Reflect.setProperty(game, 'canPause', v); return v; }
+	function get_controls() return Controls.instance;
+	function get_vocals() return game.vocals;
+	function get_isPracticeMode() return game.practiceMode;
+	function get_opponentStrumline() return {members: game.opponentStrums.members, strumlineNotes: game.opponentStrums, visible: true};
+	function get_playerStrumline() return {members: game.playerStrums.members, strumlineNotes: game.playerStrums, visible: true};
+	function get_currentDifficulty() return Difficulty.getString(false).toLowerCase();
+
+	/** Dialogue isn't supported: continue straight to the countdown instead of waiting forever. */
+	public function startConversation(?_:Dynamic) game.startCountdown();
+	public function togglePauseButton(?_:Dynamic) {}
+	public function refresh() {}
+	public function tweenCameraToPosition(?x:Float, ?y:Float, ?duration:Float, ?ease:Dynamic)
+	{
+		game.isCameraOnForcedPos = true;
+		if (x == null || y == null) return;
+		if (duration == null || duration <= 0) game.camFollow.setPosition(x, y);
+		else FlxTween.tween(game.camFollow, {x: x, y: y}, duration, {ease: ease != null ? ease : FlxEase.linear});
+	}
+	public function cancelCameraFollowTween() {}
+	public function cancelCameraZoomTween() {}
+	public function cancelAllCameraTweens() {}
 
 	public function add(obj:flixel.FlxBasic) return game.add(obj);
 	public function remove(obj:flixel.FlxBasic) return game.remove(obj);
