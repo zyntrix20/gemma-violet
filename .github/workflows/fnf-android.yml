@@ -26,7 +26,12 @@ jobs:
           java-version: '17'
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+        run: |
+          # the runner image already ships the SDK; just add the platform and build tools
+          SDKM=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -n 1)
+          yes | "$SDKM" --licenses > /dev/null || true
+          "$SDKM" "platforms;android-30" "platforms;android-33" "build-tools;30.0.3" "build-tools;34.0.0" > /dev/null
+          ls "$ANDROID_HOME/platforms" "$ANDROID_HOME/build-tools"
 
       - name: Set up Android NDK
         id: ndk
