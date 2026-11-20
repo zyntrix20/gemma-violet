@@ -2,6 +2,9 @@ name: Build APK
 
 on:
   push:
+    paths-ignore:
+      - 'fnf-engine/**'
+      - '.github/workflows/fnf-android.yml'
   workflow_dispatch:
 
 permissions:
