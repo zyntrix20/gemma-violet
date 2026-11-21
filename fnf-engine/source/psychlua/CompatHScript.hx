@@ -230,10 +230,25 @@ class CompatHScript extends HScript
 		return ev;
 	}
 
-	static function noteEvent(note:Note, player:Bool):Dynamic
+	function noteEvent(note:Note, player:Bool):Dynamic
 	{
 		var game = PlayState.instance;
 		var char:Character = (note != null && note.gfNote) ? game.gf : (player ? game.boyfriend : game.dad);
+		if (engine == VSLICE)
+		{
+			// V-Slice scripts read event.note.noteData.getMustHitNote(), event.judgement...
+			return makeEvent({
+				note: note != null ? new VSliceNoteShim(note) : null,
+				judgement: 'sick',
+				score: 350,
+				isComboBreak: false,
+				healthChange: 0.0,
+				hitDiff: 0.0,
+				doesNotesplash: true,
+				playSound: true,
+				character: char
+			});
+		}
 		return makeEvent({
 			note: note,
 			noteType: note != null ? note.noteType : '',
@@ -552,6 +567,82 @@ class VSliceConductorShim
 	function get_bpm() return Conductor.bpm;
 	function get_songPosition() return Conductor.songPosition;
 }
+/** V-Slice's song note data (SongNoteData) for a Psych note. */
+class VSliceNoteDataShim
+{
+	var note:Note;
+
+	public var time(get, never):Float;
+	public var length(get, never):Float;
+	public var kind(get, never):String;
+	public var data(get, never):Int;
+
+	public function new(note:Note)
+		this.note = note;
+
+	function get_time() return note.strumTime;
+	function get_length() return note.sustainLength;
+	function get_kind() return note.noteType != null && note.noteType.length > 0 ? note.noteType : 'normal';
+	function get_data() return (note.noteData % 4) + (note.mustPress ? 0 : 4);
+
+	public function getMustHitNote(?_:Dynamic):Bool return note.mustPress;
+	public function getDirection(?_:Dynamic):Int return note.noteData % 4;
+	public function getDirectionName(?_:Dynamic):String return ['Left', 'Down', 'Up', 'Right'][note.noteData % 4];
+	public function getStrumlineIndex(?_:Dynamic):Int return note.mustPress ? 0 : 1;
+	public function isHoldNote():Bool return note.sustainLength > 0 || note.isSustainNote;
+}
+
+/** V-Slice's NoteSprite for a Psych note: forwards the fields scripts touch. */
+class VSliceNoteShim
+{
+	public var psychNote(default, null):Note;
+	public var noteData(default, null):VSliceNoteDataShim;
+
+	public var direction(get, never):Int;
+	public var kind(get, never):String;
+	public var strumTime(get, never):Float;
+	public var length(get, never):Float;
+	public var hasBeenHit(get, never):Bool;
+	public var mayHit(get, never):Bool;
+	public var tooEarly(get, never):Bool;
+	public var hasMissed(get, never):Bool;
+	public var lowPriority(get, never):Bool;
+	public var visible(get, set):Bool;
+	public var alpha(get, set):Float;
+	public var x(get, set):Float;
+	public var y(get, set):Float;
+	public var angle(get, set):Float;
+	public var color(get, set):FlxColor;
+
+	public function new(note:Note)
+	{
+		psychNote = note;
+		noteData = new VSliceNoteDataShim(note);
+	}
+
+	function get_direction() return psychNote.noteData % 4;
+	function get_kind() return noteData.kind;
+	function get_strumTime() return psychNote.strumTime;
+	function get_length() return psychNote.sustainLength;
+	function get_hasBeenHit() return psychNote.wasGoodHit;
+	function get_mayHit() return psychNote.canBeHit;
+	function get_tooEarly() return !psychNote.canBeHit && !psychNote.tooLate;
+	function get_hasMissed() return psychNote.tooLate;
+	function get_lowPriority() return psychNote.lowPriority;
+	function get_visible() return psychNote.visible;
+	function set_visible(v:Bool) return psychNote.visible = v;
+	function get_alpha() return psychNote.alpha;
+	function set_alpha(v:Float) return psychNote.alpha = v;
+	function get_x() return psychNote.x;
+	function set_x(v:Float) return psychNote.x = v;
+	function get_y() return psychNote.y;
+	function set_y(v:Float) return psychNote.y = v;
+	function get_angle() return psychNote.angle;
+	function set_angle(v:Float) return psychNote.angle = v;
+	function get_color() return psychNote.color;
+	function set_color(v:FlxColor) return psychNote.color = v;
+}
+
 /** Reads PlayState's private beat counters. */
 class CompatTime
 {

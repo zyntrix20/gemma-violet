@@ -196,6 +196,8 @@ class Character extends FlxSprite
 		healthColorArray = (json.healthbar_colors != null && json.healthbar_colors.length > 2) ? json.healthbar_colors : [161, 161, 161];
 		vocalsFile = json.vocals_file != null ? json.vocals_file : '';
 		vsliceCamera = json.vslice_camera;
+		// V-Slice characters have no bar colors of their own: use V-Slice's green (player) / red (opponent)
+		if (vsliceCamera != null) healthColorArray = isPlayer ? [102, 255, 51] : [255, 0, 0];
 		originalFlipX = (json.flip_x == true);
 		editorIsPlayer = json._editor_isPlayer;
 
@@ -361,8 +363,9 @@ class Character extends FlxSprite
 	/**
 	 * FOR GF DANCING SHIT
 	 */
-	public function dance()
+	public function dance(?force:Bool = false)
 	{
+		if (force == true) specialAnim = false;
 		if (!debugMode && !skipDance && !specialAnim)
 		{
 			if(danceIdle)
@@ -379,8 +382,71 @@ class Character extends FlxSprite
 		}
 	}
 
+	// ---- V-Slice character API (used by converted V-Slice scripts) ----
+	/** When false, other animations are blocked until this is set back (V-Slice behaviour). */
+	public var canPlayOtherAnims:Bool = true;
+	public var ignoreExclusionPref:Array<String> = [];
+	public var characterId(get, never):String;
+	public var characterName(get, never):String;
+	function get_characterId() return curCharacter;
+	function get_characterName() return curCharacter;
+
+	public function playAnimation(name:String, restart:Bool = false, ignoreOther:Bool = false, reversed:Bool = false):Void
+	{
+		if (!canPlayOtherAnims && !ignoreOther) return;
+		if (!hasAnimation(name)) return;
+		playAnim(name, restart, reversed);
+		if (ignoreOther) canPlayOtherAnims = false;
+	}
+
+	public function getCurrentAnimation():String
+		return getAnimationName();
+
+	public var zIndex:Int = 0;
+	public var hasDanced(get, never):Bool;
+	function get_hasDanced() return danced;
+	public var danceEvery(get, set):Float;
+	function get_danceEvery() return danceEveryNumBeats;
+	function set_danceEvery(v:Float) { danceEveryNumBeats = Std.int(Math.max(1, v)); return v; }
+	public var characterType(get, never):String;
+	function get_characterType()
+	{
+		var game = PlayState.instance;
+		if (game != null && game.gf == this) return 'gf';
+		return isPlayer ? 'bf' : 'dad';
+	}
+
+	/** Where the camera looks at this character (V-Slice scripts read and change it). */
+	public var cameraFocusPoint(get, never):FlxPoint;
+	var _focusPoint:FlxPoint = FlxPoint.get();
+	function get_cameraFocusPoint()
+	{
+		var mid = getMidpoint();
+		var off = vsliceCamera != null ? vsliceCamera : cameraPosition;
+		_focusPoint.set(mid.x + off[0], mid.y + off[1]);
+		mid.put();
+		return _focusPoint;
+	}
+
+	public function resetCharacter(?_:Dynamic) dance(true);
+
+	public function isAnimationDone():Bool
+		return isAnimationFinished();
+
+	public function playSingAnimation(dir:Int, ?miss:Bool = false, ?suffix:String = ''):Void
+	{
+		var anim = 'sing' + ['LEFT', 'DOWN', 'UP', 'RIGHT'][dir % 4] + (miss ? 'miss' : '') + (suffix != null ? suffix : '');
+		if (hasAnimation(anim)) playAnim(anim, true);
+	}
+
 	public function playAnim(AnimName:String, Force:Bool = false, Reversed:Bool = false, Frame:Int = 0):Void
 	{
+		if (!canPlayOtherAnims && !AnimName.startsWith('first') && !AnimName.startsWith('death'))
+		{
+			// a locked animation blocks others until it has finished
+			if (_lastPlayedAnimation != null && !isAnimationFinished()) return;
+			canPlayOtherAnims = true;
+		}
 		specialAnim = false;
 		if(!isAnimateAtlas)
 		{

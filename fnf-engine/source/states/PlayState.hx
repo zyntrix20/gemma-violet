@@ -707,7 +707,12 @@ class PlayState extends MusicBeatState
 		#end
 	}
 
+	/** Messages already on screen this song: repeated errors (every note / frame) are shown once. */
+	var shownDebugTexts:Map<String, Bool> = [];
+
 	public function addTextToDebug(text:String, color:FlxColor) {
+		if (shownDebugTexts.exists(text)) return;
+		shownDebugTexts.set(text, true);
 		var newText:psychlua.DebugLuaText = luaDebugGroup.recycle(psychlua.DebugLuaText);
 		newText.text = text;
 		newText.color = color;
